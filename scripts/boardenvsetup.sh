@@ -1,5 +1,22 @@
 #!/bin/bash
 
+cb_config_linux()
+{
+    if [ ! -d ${CB_KBUILD_DIR} ]; then
+        mkdir -pv ${CB_KBUILD_DIR}
+    fi
+
+    if [ ! -f "${CB_KBUILD_DIR}/.config" ];then
+        cp -v ${CB_PRODUCT_DIR}/kernel_defconfig ${CB_KSRC_DIR}/arch/arm/configs/
+        make -C ${CB_KSRC_DIR} O=${CB_KBUILD_DIR} ARCH=arm \
+		CROSS_COMPILE=${CB_CROSS_COMPILE} kernel_defconfig
+        rm -f ${CB_KSRC_DIR}/arch/arm/configs/kernel_defconfig
+    fi
+
+    make -C ${CB_KSRC_DIR} O=${CB_KBUILD_DIR} ARCH=arm \
+	    CROSS_COMPILE=${CB_CROSS_COMPILE} menuconfig
+}
+
 cb_build_linux()
 {
     if [ ! -d ${CB_KBUILD_DIR} ]; then
@@ -7,9 +24,14 @@ cb_build_linux()
     fi
 
     echo "Start Building linux"
-    cp -v ${CB_PRODUCT_DIR}/kernel_defconfig ${CB_KSRC_DIR}/arch/arm/configs/
-    make -C ${CB_KSRC_DIR} O=${CB_KBUILD_DIR} ARCH=arm CROSS_COMPILE=${CB_CROSS_COMPILE} kernel_defconfig
-    rm -rf ${CB_KSRC_DIR}/arch/arm/configs/kernel_defconfig
+
+    if [ ! -f "${CB_KBUILD_DIR}/.config" ];then
+        cp -v ${CB_PRODUCT_DIR}/kernel_defconfig ${CB_KSRC_DIR}/arch/arm/configs/
+        make -C ${CB_KSRC_DIR} O=${CB_KBUILD_DIR} ARCH=arm \
+		CROSS_COMPILE=${CB_CROSS_COMPILE} kernel_defconfig
+        rm -f ${CB_KSRC_DIR}/arch/arm/configs/kernel_defconfig
+    fi
+
     cp -v ${CB_PRODUCT_DIR}/rootfs.cpio.gz ${CB_KBUILD_DIR}
     make -C ${CB_KSRC_DIR} O=${CB_KBUILD_DIR} ARCH=arm CROSS_COMPILE=${CB_CROSS_COMPILE} -j${CB_CPU_NUM} INSTALL_MOD_PATH=${CB_TARGET_DIR} uImage modules
     ${CB_CROSS_COMPILE}objcopy -R .note.gnu.build-id -S -O binary ${CB_KBUILD_DIR}/vmlinux ${CB_KBUILD_DIR}/bImage
